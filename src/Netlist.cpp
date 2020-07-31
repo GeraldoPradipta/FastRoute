@@ -35,27 +35,38 @@
 
 
 #include "Netlist.h"
-#include "openroad/Error.hh"
+//#include "openroad/Error.hh"
 
 namespace FastRoute {
 
-using ord::error;
+//using ord::error;
+
+Net Netlist::getNetByName(std::string name) {
+        Net choosenNet;
+        for (Net net : _nets) {
+                if (net.getName() == name) {
+                        choosenNet = net;
+                }
+        }
+        
+        return choosenNet;
+}
 
 void Netlist::addNet(const std::string& name, const std::string& signalType, const std::vector<Pin>& pins) {
         Net net = Net(name, signalType, pins);
-        _nets[name] = net;
+        _nets.push_back(net);
         _netCount++;
 }
         
 int Netlist::getMaxNetDegree() {
         if (_nets.size() < 1) {
-                error("Netlist not initialized yet\n");
+                //error("Netlist not initialized yet\n");
         }
     
         int maxDegree = -1;
         
-        for (auto const& net : _nets) {
-                int netDegree = net.second.getNumPins();
+        for (Net net : _nets) {
+                int netDegree = net.getNumPins();
                 if (netDegree > maxDegree) {
                         maxDegree = netDegree;
                 }
@@ -66,8 +77,8 @@ int Netlist::getMaxNetDegree() {
 
 std::vector<Pin> Netlist::getAllPorts() {
         std::vector<Pin> ports; 
-        for (auto const& net : _nets) {
-                for (Pin pin : net.second.getPins()) {
+        for (Net net : _nets) {
+                for (Pin pin : net.getPins()) {
                         if (pin.isPort()) {
                                 ports.push_back(pin);
                         }
@@ -75,6 +86,11 @@ std::vector<Pin> Netlist::getAllPorts() {
         }
         
         return ports;
+}
+
+void Netlist::randomizeNetsOrder(unsigned seed) {
+        if (seed != 0)
+                std::shuffle(_nets.begin(), _nets.end(), std::default_random_engine(seed));
 }
 
 }

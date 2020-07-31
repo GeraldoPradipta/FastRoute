@@ -53,16 +53,16 @@ namespace FastRoute {
 
 class Netlist {
 private:
-        std::map<std::string, Net> _nets;
+        std::vector<Net> _nets;
         int _netCount;
         
 public:
         Netlist()
             : _netCount(0) {};
         
-        std::map<std::string, Net> getNets() { return _nets; }
+        const std::vector<Net>& getNets() const { return _nets; }
         int getNetCount() const { return _netCount; }
-        Net getNetByName(std::string name) { return _nets[name]; }
+        Net getNetByName(std::string name);
         
         
         void addNet(const std::string& name, const std::string& signalType, const std::vector<Pin>& pins);
@@ -70,6 +70,8 @@ public:
         int getMaxNetDegree();
         
         std::vector<Pin> getAllPorts();
+
+        void randomizeNetsOrder(unsigned seed);
 };
 
 }

@@ -47,11 +47,11 @@
 #include "Coordinate.h"
 #include "Box.h"
 #include "Pin.h"
-#include "openroad/Error.hh"
+//#include "openroad/Error.hh"
 
 namespace FastRoute {
 
-using ord::error;
+//using ord::error;
 
 void DBWrapper::initGrid(int maxLayer) {
         // WORKAROUND: Initializing _chip here while we don't have a "populateFastRoute" function"
@@ -59,24 +59,24 @@ void DBWrapper::initGrid(int maxLayer) {
     
         odb::dbTech* tech = _db->getTech();
         if (!tech) {
-                error("obd::dbTech not initialized\n");
+                //error("obd::dbTech not initialized\n");
         }
 
         odb::dbBlock* block = _chip->getBlock();
         if (!block) {
-                error("odb::dbBlock not found\n");
+                //error("odb::dbBlock not found\n");
         }
         
         odb::dbTechLayer* selectedLayer = tech->findRoutingLayer(selectedMetal);
         
         if (!selectedLayer) {
-                error("Layer %d not found\n", selectedMetal);
+                //error("Layer %d not found\n", selectedMetal);
         }
         
         odb::dbTrackGrid* selectedTrack = block->findTrackGrid(selectedLayer);
         
         if (!selectedTrack) {
-                error("Track for layer %d not found\n", selectedMetal);
+                //error("Track for layer %d not found\n", selectedMetal);
         }
         
         int trackStepX, trackStepY;
@@ -92,7 +92,7 @@ void DBWrapper::initGrid(int maxLayer) {
         } else if (selectedLayer->getDirection().getValue() == odb::dbTechLayerDir::VERTICAL) {
                 trackSpacing = trackStepX;
         } else {
-                error("Layer %d does not have valid direction\n", selectedMetal);
+                //error("Layer %d does not have valid direction\n", selectedMetal);
         }
         
         odb::Rect rect;
@@ -137,7 +137,7 @@ void DBWrapper::initRoutingLayers(std::vector<RoutingLayer>& routingLayers) {
         odb::dbTech* tech = _db->getTech();
         
         if (!tech) {
-                error("obd::dbTech not initialized\n");
+                //error("obd::dbTech not initialized\n");
         }
         
         for (int l = 1; l <= tech->getRoutingLayerCount(); l++) {
@@ -150,7 +150,7 @@ void DBWrapper::initRoutingLayers(std::vector<RoutingLayer>& routingLayers) {
                 } else if (techLayer->getDirection().getValue() == odb::dbTechLayerDir::VERTICAL) {
                         preferredDirection = RoutingLayer::VERTICAL;
                 } else {
-                        error("Layer %d does not have valid direction\n", l);
+                        //error("Layer %d does not have valid direction\n", l);
                 }
                 
                 RoutingLayer routingLayer = RoutingLayer(index, name, preferredDirection);
@@ -161,12 +161,12 @@ void DBWrapper::initRoutingLayers(std::vector<RoutingLayer>& routingLayers) {
 void DBWrapper::initRoutingTracks(std::vector<RoutingTracks>& allRoutingTracks, int maxLayer, std::map<int, float> layerPitches) {
         odb::dbTech* tech = _db->getTech();
         if (!tech) {
-                error("obd::dbTech not initialized\n");
+                //error("obd::dbTech not initialized\n");
         }
 
         odb::dbBlock* block = _chip->getBlock();
         if (!block) {
-                error("odb::dbBlock not found\n");
+                //error("odb::dbBlock not found\n");
         }
         
         for (int layer = 1; layer <= tech->getRoutingLayerCount(); layer++) {
@@ -177,13 +177,13 @@ void DBWrapper::initRoutingTracks(std::vector<RoutingTracks>& allRoutingTracks, 
                 odb::dbTechLayer* techayer = tech->findRoutingLayer(layer);
         
                 if (!techayer) {
-                        error("Layer %d not found\n", selectedMetal);
+                        //error("Layer %d not found\n", selectedMetal);
                 }
 
                 odb::dbTrackGrid* selectedTrack = block->findTrackGrid(techayer);
 
                 if (!selectedTrack) {
-                        error("Track for layer %d not found\n", selectedMetal);
+                        //error("Track for layer %d not found\n", selectedMetal);
                 }
                 
                 int trackStepX, trackStepY;
@@ -216,7 +216,7 @@ void DBWrapper::initRoutingTracks(std::vector<RoutingTracks>& allRoutingTracks, 
                         numTracks = numTracksX;
                         orientation = RoutingLayer::VERTICAL;
                 } else {
-                        error("Layer %d does not have valid direction! Exiting...\n", selectedMetal);
+                        //error("Layer %d does not have valid direction! Exiting...\n", selectedMetal);
                 }
                 
                 RoutingTracks routingTracks = RoutingTracks(layer, trackPitch,
@@ -237,12 +237,12 @@ void DBWrapper::computeCapacities(int maxLayer, std::map<int, float> layerPitche
         odb::dbTech* tech = _db->getTech();
         
         if (!tech) {
-                error("obd::dbTech not initialized\n");
+                //error("obd::dbTech not initialized\n");
         }
         
         odb::dbBlock* block = _chip->getBlock();
         if (!block) {
-                error("odb::dbBlock not found\n");
+                //error("odb::dbBlock not found\n");
         }
         
         for (int l = 1; l <= tech->getRoutingLayerCount(); l++) {
@@ -255,7 +255,7 @@ void DBWrapper::computeCapacities(int maxLayer, std::map<int, float> layerPitche
                 odb::dbTrackGrid* track = block->findTrackGrid(techLayer);
                 
                 if (!track) {
-                        error("Track for layer %d not found\n", l);
+                        //error("Track for layer %d not found\n", l);
                 }
                 
                 track->getGridPatternX(0, initTrackX, numTracksX, trackStepX);
@@ -286,7 +286,7 @@ void DBWrapper::computeCapacities(int maxLayer, std::map<int, float> layerPitche
                         _grid->addHorizontalCapacity(0, l-1);
                         _grid->addVerticalCapacity(vCapacity, l-1);
                 } else {
-                        error("Layer %d does not have valid direction\n", l);
+                        //error("Layer %d does not have valid direction\n", l);
                 }
         }
 }
@@ -301,12 +301,12 @@ void DBWrapper::computeSpacingsAndMinWidth(int maxLayer) {
         odb::dbTech* tech = _db->getTech();
         
         if (!tech) {
-                error("obd::dbTech not initialized\n");
+                //error("obd::dbTech not initialized\n");
         }
         
         odb::dbBlock* block = _chip->getBlock();
         if (!block) {
-                error("odb::dbBlock not found\n");
+                //error("odb::dbBlock not found\n");
         }
         
         for (int l = 1; l <= tech->getRoutingLayerCount(); l++) {
@@ -319,7 +319,7 @@ void DBWrapper::computeSpacingsAndMinWidth(int maxLayer) {
                 odb::dbTrackGrid* track = block->findTrackGrid(techLayer);
                 
                 if (!track) {
-                        error("Track for layer %d not found\n", l);
+                        //error("Track for layer %d not found\n", l);
                 }
                 
                 track->getGridPatternX(0, initTrackX, numTracksX, trackStepX);
@@ -330,7 +330,7 @@ void DBWrapper::computeSpacingsAndMinWidth(int maxLayer) {
                 } else if (techLayer->getDirection().getValue() == odb::dbTechLayerDir::VERTICAL) {
                         minWidth = trackStepX;
                 } else {
-                        error("Layer %d does not have valid direction\n", l);
+                        //error("Layer %d does not have valid direction\n", l);
                 }
                 
                 _grid->addSpacing(minSpacing, l-1);
@@ -345,13 +345,13 @@ void DBWrapper::initNetlist() {
         odb::dbBlock* block = _chip->getBlock();
         odb::dbTech* tech = _db->getTech();
         if (!block) {
-                error("odb::dbBlock not found\n");
+                //error("odb::dbBlock not found\n");
         }
         
         odb::dbSet<odb::dbNet> nets = block->getNets();
         
         if (nets.size() == 0) {
-                error("Design without nets");
+                //error("Design without nets");
         }
         
         for (odb::dbNet* currNet : nets) {
@@ -594,12 +594,12 @@ void DBWrapper::initObstacles() {
         // Get routing obstructions
         odb::dbTech* tech = _db->getTech();
         if (!tech) {
-                error("obd::dbTech not initialized");
+                ////error("obd::dbTech not initialized");
         }
 
         odb::dbBlock* block = _chip->getBlock();
         if (!block) {
-                error("odb::dbBlock not found\n");
+         //       //error("odb::dbBlock not found\n");
         }
 
         std::map<std::string, uint> layerExtensions;
@@ -748,14 +748,14 @@ void DBWrapper::initObstacles() {
         odb::dbSet<odb::dbNet> nets = block->getNets();
         
         if (nets.size() == 0) {
-                error("Design without nets\n");
+                //error("Design without nets\n");
         }
         
         for (odb::dbNet* currNet : nets) {
-                uint wireCnt = 0, viaCnt = 0;
-                currNet->getWireCount(wireCnt, viaCnt);
-                if (wireCnt < 1)
-                        continue;
+                //uint wireCnt = 0, viaCnt = 0;
+                //currNet->getWireCount(wireCnt, viaCnt);
+                //if (wireCnt < 1)
+                //        continue;
                 
                 if (currNet->getSigType() == odb::dbSigType::POWER ||
                     currNet->getSigType() == odb::dbSigType::GROUND) {
@@ -779,33 +779,33 @@ void DBWrapper::initObstacles() {
                                         }
                                 }
                         }
-                } else {
-                        odb::dbWirePath path;
-                        odb::dbWirePathShape pshape;
-                        odb::dbWire* wire = currNet->getWire();
-                        
-                        odb::dbWirePathItr pitr;
-                        for (pitr.begin(wire); pitr.getNextPath(path);) {
-                                while (pitr.getNextShape(pshape)) {
-                                        if (pshape.shape.isVia()) {
-                                                continue;
-                                        } else {
-                                                odb::Rect wireRect;
-                                                pshape.shape.getBox(wireRect);
-                                                int l = pshape.shape.getTechLayer()->getRoutingLevel();
-                                                
-                                                Coordinate lowerBound = Coordinate(wireRect.xMin(), wireRect.yMin());
-                                                Coordinate upperBound = Coordinate(wireRect.xMax(), wireRect.yMax());
-                                                Box obstacleBox = Box(lowerBound, upperBound, l);
-                                                if (!dieArea.inside(obstacleBox)) {
-                                                        std::cout << "[WARNING] Net " << currNet->getConstName()
-                                                                  << " has wires outside die area\n";
-                                                }
-                                                _grid->addObstacle(l, obstacleBox);
-                                        }
-                                }
-                        }
-                }
+                } //else {
+                  //      odb::dbWirePath path;
+                  //      odb::dbWirePathShape pshape;
+                  //      odb::dbWire* wire = currNet->getWire();
+                  //      
+                  //      odb::dbWirePathItr pitr;
+                  //      for (pitr.begin(wire); pitr.getNextPath(path);) {
+                  //              while (pitr.getNextShape(pshape)) {
+                  //                      if (pshape.shape.isVia()) {
+                  //                              continue;
+                  //                      } else {
+                  //                              odb::Rect wireRect;
+                  //                              pshape.shape.getBox(wireRect);
+                  //                              int l = pshape.shape.getTechLayer()->getRoutingLevel();
+                  //                              
+                  //                              Coordinate lowerBound = Coordinate(wireRect.xMin(), wireRect.yMin());
+                  //                              Coordinate upperBound = Coordinate(wireRect.xMax(), wireRect.yMax());
+                  //                              Box obstacleBox = Box(lowerBound, upperBound, l);
+                  //                              if (!dieArea.inside(obstacleBox)) {
+                  //                                      std::cout << "[WARNING] Net " << currNet->getConstName()
+                  //                                                << " has wires outside die area\n";
+                  //                              }
+                  //                              _grid->addObstacle(l, obstacleBox);
+                  //                      }
+                  //              }
+                  //      }
+                //}
         }
 }
 
@@ -816,18 +816,18 @@ int DBWrapper::computeMaxRoutingLayer() {
 
         odb::dbTech* tech = _db->getTech();
         if (!tech) {
-                error("obd::dbTech not initialized\n");
+                //error("obd::dbTech not initialized\n");
         }
 
         odb::dbBlock* block = _chip->getBlock();
         if (!block) {
-                error("odb::dbBlock not found\n");
+                //error("odb::dbBlock not found\n");
         }
         
         for (int layer = 1; layer <= tech->getRoutingLayerCount(); layer++) {          
                 odb::dbTechLayer* techLayer = tech->findRoutingLayer(layer);
                 if (!techLayer) {
-                        std::cout << "[ERROR] Layer" << selectedMetal << " not found! Exiting...\n";
+                        std::cout << "[//error] Layer" << selectedMetal << " not found! Exiting...\n";
                         std::exit(1);
                 }
                 odb::dbTrackGrid* selectedTrack = block->findTrackGrid(techLayer);
@@ -873,7 +873,7 @@ std::set<int> DBWrapper::findTransitionLayers(int maxRoutingLayer) {
         odb::dbSet<odb::dbTechVia> vias = tech->getVias();
         
         if (vias.size() == 0) {
-                error("Tech without vias\n");
+                //error("Tech without vias\n");
         }
         
         std::vector<odb::dbTechVia*> defaultVias;

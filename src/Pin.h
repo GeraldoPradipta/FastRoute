@@ -72,6 +72,9 @@ private:
         
         void sortLayers() { std::sort(_layers.begin(), _layers.end()); }
         
+        // Added for RCPlace
+        Coordinate _gridPos;
+
 public:
         Pin() = default;
         Pin(const std::string& name, const Coordinate& position,
@@ -95,6 +98,10 @@ public:
         bool isPort() const { return _isPort; }
         Type getType() const { return _type; }
         bool isConnectedToPad() const { return _connectedToPad; }
+        
+        // Added for RCPlace
+        void setGridPos (const Coordinate& gridPos) { _gridPos = gridPos; }
+        Coordinate getGridPos() const { return _gridPos; }
 };
 
 }

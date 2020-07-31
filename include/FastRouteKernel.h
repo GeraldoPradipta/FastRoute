@@ -76,12 +76,15 @@ protected:
         std::vector<RoutingTracks> *_allRoutingTracks = nullptr;
 
 private:
-        ord::OpenRoad *_openroad;
+        //ord::OpenRoad *_openroad;
         // Objects variables
         DBWrapper* _dbWrapper = nullptr;
         FT* _fastRoute = nullptr;
         Coordinate* _gridOrigin = nullptr;
         std::vector<FastRoute::NET> *_result;
+        
+        // RCPlace Variable
+        std::map<std::string, std::vector<FastRoute::Pin>> _netMap;
 
         // Flow variables
         std::string _outfile;
@@ -166,7 +169,6 @@ private:
                               const std::map<Point, int>& segsAtPoint);
         void mergeSegments(FastRoute::NET &net);
         bool pinOverlapsWithSingleTrack(const Pin& pin, Coordinate &trackPosition);
-        ROUTE createFakePin(Pin pin, Coordinate &pinPosition, RoutingLayer layer);
         
         // check functions
         void checkPinPlacement();
@@ -230,6 +232,7 @@ public:
         void setAdjustment(const float adjustment);
         void setMinRoutingLayer(const int minLayer);
         void setMaxRoutingLayer(const int maxLayer);
+        void setDbId(unsigned idx) {_dbId = idx; }
         void setUnidirectionalRoute(const bool unidirRoute);
         void setClockNetRouting(const bool clockNetRouting);
         void setPDRev(const bool pdRev);
@@ -263,6 +266,9 @@ public:
         // congestion drive replace functions
         ROUTE_ getRoute();
         std::vector<EST_> getEst();
+
+        // RCPlace Function
+        std::map<std::string, std::vector<FastRoute::Pin>> getNetMap();
 };
 
 }

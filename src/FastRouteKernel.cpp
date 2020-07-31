@@ -55,24 +55,24 @@
 #include "RcTreeBuilder.h"
 #include "include/FastRoute.h"
 
-#include "openroad/OpenRoad.hh"
-#include "openroad/Error.hh"
+//#include "openroad/OpenRoad.hh"
+//#include "openroad/Error.hh"
 #include "sta/Parasitics.hh"
-#include "db_sta/dbSta.hh"
+//#include "db_sta/dbSta.hh"
 
 namespace FastRoute {
 
-using ord::error;
+//using ord::error;
 
 FastRouteKernel::FastRouteKernel() {
         init();
 }
 
-void FastRouteKernel::init(ord::OpenRoad *openroad) {
-  _openroad = openroad;
-  // This should be using a pointer to the db, not an object id -cherry
-  _dbId = openroad->getDb()->getId();
-}
+//void FastRouteKernel::init(ord::OpenRoad *openroad) {
+//  _openroad = openroad;
+//  // This should be using a pointer to the db, not an object id -cherry
+//  _dbId = openroad->getDb()->getId();
+//}
 
 void FastRouteKernel::init() {
         // Allocate memory for objects
@@ -369,29 +369,29 @@ void FastRouteKernel::runFastRoute() {
 }
 
 void FastRouteKernel::estimateRC() {
-        runFastRoute();
-        addRemainingGuides(*_result);
-
-        sta::dbSta* dbSta = _openroad->getSta();
-	sta::Parasitics *parasitics = dbSta->parasitics();
-	parasitics->deleteParasitics();
-
-	RcTreeBuilder builder(_openroad, _dbWrapper);
-        for (FastRoute::NET &netRoute : *_result) {
-                mergeSegments(netRoute);
-
-                SteinerTree sTree;
-                Net net = _netlist->getNetByName(netRoute.name);
-                std::vector<Pin> pins = net.getPins();
-                std::vector<ROUTE> route = netRoute.route;
-                sTree = createSteinerTree(route, pins);
-                if (checkSteinerTree(sTree))
-		  builder.run(net, sTree, *_grid);
-		else {
-                        std::cout << " [ERROR] Error on Steiner tree of net "
-                                  << netRoute.name << "\n";
-                }
-        }
+//        runFastRoute();
+//        addRemainingGuides(*_result);
+//
+//        sta::dbSta* dbSta = _openroad->getSta();
+//	sta::Parasitics *parasitics = dbSta->parasitics();
+//	parasitics->deleteParasitics();
+//
+//	RcTreeBuilder builder(_openroad, _dbWrapper);
+//        for (FastRoute::NET &netRoute : *_result) {
+//                mergeSegments(netRoute);
+//
+//                SteinerTree sTree;
+//                Net net = _netlist->getNetByName(netRoute.name);
+//                std::vector<Pin> pins = net.getPins();
+//                std::vector<ROUTE> route = netRoute.route;
+//                sTree = createSteinerTree(route, pins);
+//                if (checkSteinerTree(sTree))
+//		  builder.run(net, sTree, *_grid);
+//		else {
+//                        std::cout << " [ERROR] Error on Steiner tree of net "
+//                                  << netRoute.name << "\n";
+//                }
+//        }
 }
 
 void FastRouteKernel::initGrid() {        
@@ -468,8 +468,9 @@ void FastRouteKernel::initializeNets() {
         int minDegree = std::numeric_limits<int>::max();
         int maxDegree = std::numeric_limits<int>::min();
 
-        for (auto const& n : _netlist->getNets()) {
-                Net net = n.second;
+        _netlist->randomizeNetsOrder(_seed);
+
+        for (Net net : _netlist->getNets()) {
                 if (net.getNumPins() <= 1) {
                         continue;
                 }
@@ -488,8 +489,7 @@ void FastRouteKernel::initializeNets() {
         _fastRoute->setNumberNets(validNets);
         _fastRoute->setMaxNetDegree(_netlist->getMaxNetDegree());
         
-        for (auto const& n : _netlist->getNets()) {
-                Net net = n.second;
+        for (Net net : _netlist->getNets()) {
                 float netAlpha = _alpha;
 
                 if (net.getNumPins() <= 1) {
@@ -516,6 +516,7 @@ void FastRouteKernel::initializeNets() {
                 
                 _netsDegree[net.getName()] = net.getNumPins();
                 
+                std::vector <Pin> newPinPos; // ADDED for RCplace
                 std::vector<FastRoute::PIN> pins;
                 for (Pin pin : net.getPins()) {
                         Coordinate pinPosition;
@@ -556,7 +557,47 @@ void FastRouteKernel::initializeNets() {
                         }
 
                         if ((pin.isConnectedToPad() || pin.isPort()) && !_estimateRC ) { // If pin is connected to PAD, create a "fake" location in routing grid to avoid PAD obstacles
-                                FastRoute::ROUTE pinConnection = createFakePin(pin, pinPosition, layer);
+                                std::cout << "Creating fake pin\n";
+                                FastRoute::ROUTE pinConnection;
+                                pinConnection.initLayer = topLayer;
+                                pinConnection.finalLayer = topLayer;
+
+                                if (layer.getPreferredDirection() == RoutingLayer::HORIZONTAL) {
+                                        pinConnection.finalX = pinPosition.getX();
+                                        pinConnection.initY = pinPosition.getY();
+                                        pinConnection.finalY = pinPosition.getY();
+
+                                        DBU newXPosition;
+                                        if (pin.getOrientation() == Orientation::ORIENT_WEST) {
+                                                newXPosition = pinPosition.getX() + (_gcellsOffset * _grid->getTileWidth());
+                                                pinConnection.initX = newXPosition;
+                                                pinPosition.setX(newXPosition);
+                                        } else if (pin.getOrientation() == Orientation::ORIENT_EAST) {
+                                                newXPosition = pinPosition.getX() - (_gcellsOffset * _grid->getTileWidth());
+                                                pinConnection.initX = newXPosition;
+                                                pinPosition.setX(newXPosition);
+                                        } else {
+                                                std::cout << "[WARNING] Pin " << pin.getName() << " has invalid orientation\n";
+                                        }
+                                } else {
+                                        pinConnection.initX = pinPosition.getX();
+                                        pinConnection.finalX = pinPosition.getX();
+                                        pinConnection.finalY = pinPosition.getY();
+
+                                        DBU newYPosition;
+                                        if (pin.getOrientation() == Orientation::ORIENT_SOUTH) {
+                                                newYPosition = pinPosition.getY() + (_gcellsOffset * _grid->getTileHeight());
+                                                pinConnection.initY = newYPosition;
+                                                pinPosition.setY(newYPosition);
+                                        } else if (pin.getOrientation() == Orientation::ORIENT_NORTH) {
+                                                newYPosition = pinPosition.getY() - (_gcellsOffset * _grid->getTileHeight());
+                                                pinConnection.initY = newYPosition;
+                                                pinPosition.setY(newYPosition);
+                                        } else {
+                                                std::cout << "[WARNING] Pin " << pin.getName() << " has invalid orientation\n";
+                                        }
+                                }
+
                                 _padPinsConnections[net.getName()].push_back(pinConnection);
                         }
                         
@@ -565,7 +606,13 @@ void FastRouteKernel::initializeNets() {
                         grPin.y = pinPosition.getY();
                         grPin.layer = topLayer;
                         pins.push_back(grPin);
+                        // Added for RCPlace
+                        pin.setGridPos(pinPosition);
+                        newPinPos.push_back(pin);
                 }
+                
+                // Added command for RCPlace
+                _netMap[net.getName()] = newPinPos;
                 
                 FastRoute::PIN grPins[pins.size()];
                 char netName[net.getName().size() + 1];
@@ -623,7 +670,7 @@ void FastRouteKernel::computeGridAdjustments() {
                         vSpace = _grid->getMinWidths()[layer-1];
                         newVCapacity = std::floor((_grid->getTileWidth() + xExtra)/vSpace);
                 } else {
-                    error("Layer spacing not found\n");
+                    //error("Layer spacing not found\n");
                 }
                 
                 int numAdjustments = yGrids - 1 + xGrids - 1;
@@ -877,7 +924,7 @@ void FastRouteKernel::computeRegionAdjustments(const Coordinate& lowerBound, con
         
         if ((dieBox.getLowerBound().getX() > lowerBound.getX() && dieBox.getLowerBound().getY() > lowerBound.getY()) ||
             (dieBox.getUpperBound().getX() < upperBound.getX() && dieBox.getUpperBound().getY() < upperBound.getY())) {
-                error("Informed region is outside die area\n");
+                //error("Informed region is outside die area\n");
         }
         
         RoutingLayer routingLayer = getRoutingLayerByIndex(layer);
@@ -1134,7 +1181,7 @@ void FastRouteKernel::writeGuides() {
         guideFile.open(_outfile);
         if (!guideFile.is_open()) {
                 guideFile.close();
-                error("Guides file could not be open\n");
+                //error("Guides file could not be open\n");
         }
         RoutingLayer phLayerF;
         addRemainingGuides(*_result);
@@ -1168,7 +1215,7 @@ void FastRouteKernel::writeGuides() {
                         if (route.initLayer == route.finalLayer) {
                                 if (route.initLayer < _minRoutingLayer && 
                                     route.initX != route.finalX && route.initY != route.finalY) {
-                                        error("Routing with guides in blocked metal for net %s\n", netRoute.name.c_str());
+                                        //error("Routing with guides in blocked metal for net %s\n", netRoute.name.c_str());
                                 }
                                 Box box;
                                 box = globalRoutingToBox(route);
@@ -1181,7 +1228,7 @@ void FastRouteKernel::writeGuides() {
                                 finalLayer = route.finalLayer;
                         } else {
                                 if (abs(route.finalLayer - route.initLayer) > 1) {
-                                        error("Connection between non-adjacent layers in net %s\n", netRoute.name.c_str());
+                                        //error("Connection between non-adjacent layers in net %s\n", netRoute.name.c_str());
                                 } else {
                                         RoutingLayer phLayerI;
                                         if (route.initLayer < _minRoutingLayer && !_unidirectionalRoute) {
@@ -1292,7 +1339,7 @@ void FastRouteKernel::addRemainingGuides(std::vector<FastRoute::NET> &globalRout
                         for (uint p = 0; p < pins.size(); p++){
                                 if (p > 0){
                                         if (pins[p].x != pins[p-1].x || pins[p].y != pins[p-1].y) { // If the net is not local, FR core result is invalid
-                                                error("Net %s not properly covered\n", netRoute.name.c_str());
+                                                //error("Net %s not properly covered\n", netRoute.name.c_str());
                                         }
                                 }
 
@@ -1359,7 +1406,7 @@ void FastRouteKernel::addRemainingGuides(std::vector<FastRoute::NET> &globalRout
 
                                         for (FastRoute::ROUTE seg : coverSegs) {
                                                 if (seg.initLayer != seg.finalLayer) {
-                                                        error("Segment has invalid layer assignment\n");
+                                                        //error("Segment has invalid layer assignment\n");
                                                 }
 
                                                 int diffLayers = std::abs(pin.layer - seg.initLayer);
@@ -1441,7 +1488,7 @@ void FastRouteKernel::connectPadPins(std::vector<FastRoute::NET> &globalRoute) {
 void FastRouteKernel::mergeBox(std::vector<Box>& guideBox) {
         std::vector<Box> finalBox;
         if (guideBox.size() < 1) {
-                error("Guides vector is empty\n");
+                //error("Guides vector is empty\n");
         }
         finalBox.push_back(guideBox[0]);
         for (uint i=1; i < guideBox.size(); i++){
@@ -1513,7 +1560,7 @@ void FastRouteKernel::checkPinPlacement() {
         
         for (Pin port : _netlist->getAllPorts()) {
                 if (port.getNumLayers() == 0) {
-                        error("Pin %s does not have layer assignment\n", port.getName().c_str());
+                        //error("Pin %s does not have layer assignment\n", port.getName().c_str());
                 }
                 DBU layer = port.getLayers()[0]; // port have only one layer
                 
@@ -1534,7 +1581,7 @@ void FastRouteKernel::checkPinPlacement() {
         }
         
         if (invalid) {
-                error("Invalid pin placement\n");
+                //error("Invalid pin placement\n");
         }
 }
 
@@ -1685,8 +1732,7 @@ std::vector<FastRouteKernel::EST_> FastRouteKernel::getEst() {
 void FastRouteKernel::checkSinksAndSource() {
         bool invalid = false;
 
-        for (auto const& n : _netlist->getNets()) {
-                Net net = n.second;
+        for (Net net : _netlist->getNets()) {
                 if (net.getNumPins() < 2) {
                         continue;
                 }
@@ -1702,13 +1748,13 @@ void FastRouteKernel::checkSinksAndSource() {
 
                 if (net.getNumPins() != (sinkCnt+sourceCnt) || sourceCnt != 1) {
                         invalid = true;
-                        std::cout << "[ERROR] Net " << net.getName() << " has invalid sinks/source distribution\n";
+                        std::cout << "[//error] Net " << net.getName() << " has invalid sinks/source distribution\n";
                         std::cout << "    #Sinks: " << sinkCnt << "; #sources: " << sourceCnt << "\n";
                 }
         }
 
         if (invalid) {
-                error("Invalid sources and sinks");
+                //error("Invalid sources and sinks");
         }
 }
 
@@ -1732,13 +1778,13 @@ void FastRouteKernel::mergeSegments(FastRoute::NET &net) {
         std::vector<ROUTE> segments = net.route;
         std::vector<ROUTE> finalSegments;
         if (segments.size() < 1) {
-                error("Net %s has segments vector empty\n", net.name.c_str());
+                //error("Net %s has segments vector empty\n", net.name.c_str());
         }
 
         std::map<Point, int> segsAtPoint;
         for (const ROUTE& seg : segments) {
-          segsAtPoint[{seg.initX, seg.initY, seg.initLayer}] += 1;
-          segsAtPoint[{seg.finalX, seg.finalY, seg.finalLayer}] += 1;
+          segsAtPoint[Point{seg.initX, seg.initY, seg.initLayer}] += 1;
+          segsAtPoint[Point{seg.finalX, seg.finalY, seg.finalLayer}] += 1;
         }
 
         uint i = 0;
@@ -1783,9 +1829,9 @@ bool FastRouteKernel::segmentsConnect(const ROUTE& seg0, const ROUTE& seg1, ROUT
         if (initX0 == finalX0 && initX1 == finalX1 && initX0 == initX1) { // vertical segments aligned
                 bool merge = false;
                 if (initY0 == finalY1) {
-                         merge = segsAtPoint.at({initX0, initY0, seg0.initLayer}) == 2;
+                         merge = segsAtPoint.at(Point{initX0, initY0, seg0.initLayer}) == 2;
                 } else if (finalY0 == initY1) {
-                        merge = segsAtPoint.at({initX1, initY1, seg1.initLayer}) == 2;
+                        merge = segsAtPoint.at(Point{initX1, initY1, seg1.initLayer}) == 2;
                 }
                 if (merge) {
                         newSeg.initX = std::min(initX0, initX1);
@@ -1797,9 +1843,9 @@ bool FastRouteKernel::segmentsConnect(const ROUTE& seg0, const ROUTE& seg1, ROUT
         } else if (initY0 == finalY0 && initY1 == finalY1 && initY0 == initY1) { // horizontal segments aligned
                 bool merge = false;
                 if (initX0 == finalX1) {
-                        merge = segsAtPoint.at({initX0, initY0, seg0.initLayer}) == 2;
+                        merge = segsAtPoint.at(Point{initX0, initY0, seg0.initLayer}) == 2;
                 } else if (finalX0 == initX1) {
-                        merge = segsAtPoint.at({initX1, initY1, seg1.initLayer}) == 2;
+                        merge = segsAtPoint.at(Point{initX1, initY1, seg1.initLayer}) == 2;
                 }
                 if (merge) {
                         newSeg.initX = std::min(initX0, initX1);
@@ -2070,7 +2116,46 @@ SteinerTree FastRouteKernel::createSteinerTree(std::vector<ROUTE> route, std::ve
                 }
 
                 if ((pin.isConnectedToPad() || pin.isPort()) && !_estimateRC) { // If pin is connected to PAD, create a "fake" location in routing grid to avoid PAD obstacles
-                        FastRoute::ROUTE pinConnection = createFakePin(pin, pinPosition, layer);
+                        std::cout << "Creating fake pin\n";
+                        FastRoute::ROUTE pinConnection;
+                        pinConnection.initLayer = topLayer;
+                        pinConnection.finalLayer = topLayer;
+
+                        if (layer.getPreferredDirection() == RoutingLayer::HORIZONTAL) {
+                                pinConnection.finalX = pinPosition.getX();
+                                pinConnection.initY = pinPosition.getY();
+                                pinConnection.finalY = pinPosition.getY();
+
+                                DBU newXPosition;
+                                if (pin.getOrientation() == Orientation::ORIENT_WEST) {
+                                        newXPosition = pinPosition.getX() + (_gcellsOffset * _grid->getTileWidth());
+                                        pinConnection.initX = newXPosition;
+                                        pinPosition.setX(newXPosition);
+                                } else if (pin.getOrientation() == Orientation::ORIENT_EAST) {
+                                        newXPosition = pinPosition.getX() - (_gcellsOffset * _grid->getTileWidth());
+                                        pinConnection.initX = newXPosition;
+                                        pinPosition.setX(newXPosition);
+                                } else {
+                                        std::cout << "[WARNING] Pin " << pin.getName() << " has invalid orientation\n";
+                                }
+                        } else {
+                                pinConnection.initX = pinPosition.getX();
+                                pinConnection.finalX = pinPosition.getX();
+                                pinConnection.finalY = pinPosition.getY();
+
+                                DBU newYPosition;
+                                if (pin.getOrientation() == Orientation::ORIENT_SOUTH) {
+                                        newYPosition = pinPosition.getY() + (_gcellsOffset * _grid->getTileHeight());
+                                        pinConnection.initY = newYPosition;
+                                        pinPosition.setY(newYPosition);
+                                } else if (pin.getOrientation() == Orientation::ORIENT_NORTH) {
+                                        newYPosition = pinPosition.getY() - (_gcellsOffset * _grid->getTileHeight());
+                                        pinConnection.initY = newYPosition;
+                                        pinPosition.setY(newYPosition);
+                                } else {
+                                        std::cout << "[WARNING] Pin " << pin.getName() << " has invalid orientation\n";
+                                }
+                        }
                 }
 
                 Node node;
@@ -2269,49 +2354,8 @@ bool FastRouteKernel::pinOverlapsWithSingleTrack(const Pin& pin, Coordinate &tra
         return false;
 }
 
-FastRoute::ROUTE FastRouteKernel::createFakePin(Pin pin, Coordinate &pinPosition, RoutingLayer layer) {
-        int topLayer = layer.getIndex();
-        FastRoute::ROUTE pinConnection;
-        pinConnection.initLayer = topLayer;
-        pinConnection.finalLayer = topLayer;
-
-        if (layer.getPreferredDirection() == RoutingLayer::HORIZONTAL) {
-                pinConnection.finalX = pinPosition.getX();
-                pinConnection.initY = pinPosition.getY();
-                pinConnection.finalY = pinPosition.getY();
-
-                DBU newXPosition;
-                if (pin.getOrientation() == Orientation::ORIENT_WEST) {
-                        newXPosition = pinPosition.getX() + (_gcellsOffset * _grid->getTileWidth());
-                        pinConnection.initX = newXPosition;
-                        pinPosition.setX(newXPosition);
-                } else if (pin.getOrientation() == Orientation::ORIENT_EAST) {
-                        newXPosition = pinPosition.getX() - (_gcellsOffset * _grid->getTileWidth());
-                        pinConnection.initX = newXPosition;
-                        pinPosition.setX(newXPosition);
-                } else {
-                        std::cout << "[WARNING] Pin " << pin.getName() << " has invalid orientation\n";
-                }
-        } else {
-                pinConnection.initX = pinPosition.getX();
-                pinConnection.finalX = pinPosition.getX();
-                pinConnection.finalY = pinPosition.getY();
-
-                DBU newYPosition;
-                if (pin.getOrientation() == Orientation::ORIENT_SOUTH) {
-                        newYPosition = pinPosition.getY() + (_gcellsOffset * _grid->getTileHeight());
-                        pinConnection.initY = newYPosition;
-                        pinPosition.setY(newYPosition);
-                } else if (pin.getOrientation() == Orientation::ORIENT_NORTH) {
-                        newYPosition = pinPosition.getY() - (_gcellsOffset * _grid->getTileHeight());
-                        pinConnection.initY = newYPosition;
-                        pinPosition.setY(newYPosition);
-                } else {
-                        std::cout << "[WARNING] Pin " << pin.getName() << " has invalid orientation\n";
-                }
-        }
-
-        return pinConnection;
+std::map<std::string, std::vector<FastRoute::Pin>> FastRouteKernel::getNetMap() {
+  return _netMap;
 }
 
 }

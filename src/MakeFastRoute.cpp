@@ -36,7 +36,7 @@
 
 #include "sta/StaMain.hh"
 #include "MakeFastRoute.h"
-#include "openroad/OpenRoad.hh"
+//#include "openroad/OpenRoad.hh"
 #include "FastRouteKernel.h"
 #include "opendb/db.h"
 
@@ -65,14 +65,14 @@ void deleteFastRoute(void *fastroute)
         delete FastRoute::fastRouteKernel;
 }
 
-void initFastRoute(OpenRoad *openroad)
-{
-        Tcl_Interp *tcl_interp = openroad->tclInterp();
-        // Define swig TCL commands.
-        Fastroute_Init(tcl_interp);
-        sta::evalTclInit(tcl_interp, sta::fastroute_tcl_inits);
-        
-	FastRoute::fastRouteKernel->init(openroad);
-}
+//void initFastRoute(OpenRoad *openroad)
+//{
+//        Tcl_Interp *tcl_interp = openroad->tclInterp();
+//        // Define swig TCL commands.
+//        Fastroute_Init(tcl_interp);
+//        sta::evalTclInit(tcl_interp, sta::fastroute_tcl_inits);
+//        
+//	FastRoute::fastRouteKernel->init(openroad);
+//}
 
 }
